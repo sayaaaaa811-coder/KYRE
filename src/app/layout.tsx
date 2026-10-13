@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
+import { connection } from "next/server";
 import "./globals.css";
 
 // next/font はビルド時にフォントを取得して自己ホストする（閲覧時に Google へ通信しない）
@@ -29,7 +30,9 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // CSP の nonce を毎回付与するため、ページはリクエストごとに生成する
+  await connection();
   return (
     <html lang="ja" className={`${notoSans.variable} ${notoSerif.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>

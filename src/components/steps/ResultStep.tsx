@@ -7,30 +7,55 @@ import { SettingsControls } from "@/components/SettingsControls";
 import { Button } from "@/components/ui/Button";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { Notice } from "@/components/ui/Notice";
-import type { Candidate, CandidateEvaluation, Settings } from "@/lib/types";
+import type { CalendarErrorCode, Candidate, CandidateEvaluation, Settings } from "@/lib/types";
+
+const ERROR_TEXT: Record<CalendarErrorCode, { message: string; reconnect: boolean }> = {
+  UNAUTHENTICATED: {
+    message: "Googleカレンダーとの連携の有効期限が切れました。もう一度連携してください。",
+    reconnect: true,
+  },
+  PERMISSION_DENIED: {
+    message:
+      "カレンダーの空き状況へのアクセスが許可されていません。もう一度連携し、カレンダーの項目を許可してください。",
+    reconnect: true,
+  },
+  RATE_LIMITED: {
+    message: "短時間に操作が集中しました。少し時間をおいてから、もう一度お試しください。",
+    reconnect: false,
+  },
+  FETCH_FAILED: { message: "予定を取得できませんでした。もう一度お試しください。", reconnect: false },
+  NETWORK: {
+    message: "インターネットに接続できませんでした。通信状況を確認して、もう一度お試しください。",
+    reconnect: false,
+  },
+};
 
 export function ResultStep({
   candidates,
   evaluations,
   settings,
   calendarKind,
-  fetchFailed,
+  errorCode,
   retrying,
   onSettingsChange,
   onRetry,
+  onReconnect,
   onEditCandidates,
 }: {
   candidates: Candidate[];
   evaluations: CandidateEvaluation[];
   settings: Settings;
   calendarKind: "mock" | "google";
-  fetchFailed: boolean;
+  errorCode: CalendarErrorCode | null;
   retrying: boolean;
   onSettingsChange: (settings: Settings) => void;
   onRetry: () => void;
+  onReconnect: () => void;
   onEditCandidates: () => void;
 }) {
   const [showSettings, setShowSettings] = useState(false);
+  const fetchFailed = errorCode !== null;
+  const error = errorCode ? ERROR_TEXT[errorCode] : null;
   const byId = new Map(candidates.map((c) => [c.id, c]));
   const availableCount = evaluations.filter((e) => e.status === "available").length;
 
@@ -44,20 +69,28 @@ export function ResultStep({
             : "参加できる候補はありませんでした"}
       </h2>
 
-      {calendarKind === "mock" && (
-        <p className="mt-2 inline-block rounded-full bg-gold-soft px-3 py-1 text-xs text-gold-deep">
-          デモ用のダミーカレンダーで照合しています
-        </p>
-      )}
+      <p className="mt-2 inline-block rounded-full bg-gold-soft px-3 py-1 text-xs text-gold-deep">
+        {calendarKind === "mock"
+          ? "デモ用のダミーカレンダーで照合しています"
+          : "Googleカレンダー（メイン）の予定と照合しています"}
+      </p>
 
-      {fetchFailed && (
+      {error && (
         <div className="mt-4 space-y-3">
           <Notice tone="alert">
-            予定を取得できなかったため、空き状況は表示していません。通信状況を確認して、もう一度お試しください。
+            {error.message}
+            <br />
+            予定を確認できていないため、空き状況は表示していません。
           </Notice>
-          <Button variant="secondary" className="w-full" onClick={onRetry} disabled={retrying}>
-            {retrying ? "再試行しています…" : "もう一度試す"}
-          </Button>
+          {error.reconnect ? (
+            <Button className="w-full" onClick={onReconnect}>
+              Googleでもう一度連携する
+            </Button>
+          ) : (
+            <Button variant="secondary" className="w-full" onClick={onRetry} disabled={retrying}>
+              {retrying ? "再試行しています…" : "もう一度試す"}
+            </Button>
+          )}
         </div>
       )}
 

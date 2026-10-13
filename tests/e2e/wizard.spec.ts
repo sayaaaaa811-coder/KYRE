@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 // 2026-10-13(火) 10:00 JST に固定
 const NOW = new Date("2026-10-13T10:00:00+09:00");
 
-async function open(page: Page, query = "") {
+async function open(page: Page, query = "?mock=mixed") {
   await page.clock.setFixedTime(NOW);
   await page.goto(`/${query}`);
   await expect(page.getByRole("button", { name: /基準日|10\/13\(火\)/ })).toBeVisible();

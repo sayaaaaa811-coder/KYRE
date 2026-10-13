@@ -3,7 +3,8 @@
 LINE などで届いた日程候補を貼り付けると、Google カレンダーの空き状況と照合して、参加できる日時・代替案・返信文を提示する無料 Web アプリ（開発中）。
 
 - 設計書: [docs/README.md](docs/README.md)
-- 進捗報告: [Phase 1](docs/progress/phase-1.md) / [Phase 2](docs/progress/phase-2.md)
+- 進捗報告: [Phase 1](docs/progress/phase-1.md) / [Phase 2](docs/progress/phase-2.md) / [Phase 3](docs/progress/phase-3.md)
+- Google カレンダー連携の設定: [docs/setup/google-cloud.md](docs/setup/google-cloud.md)
 
 ## 自分のパソコンで動かす手順（初心者向け）
 
@@ -32,6 +33,8 @@ npm run dev
 ```
 
 ブラウザで <http://localhost:3000> を開きます。終了するときはターミナルで `Ctrl + C` を押します。
+
+- Google カレンダーと連携するには、[設定手順](docs/setup/google-cloud.md) に沿って `.env.local` を作成してください。設定がなくても、デモ用のカレンダーで試せます。
 
 - ダミーカレンダーの状態を変えて試せます（URL の末尾に付けます）
   - `?mock=mixed`（初期値）: 毎日 12:00–13:00、偶数日は 18:30–20:00 が予定あり。7 の倍数の日は終日予定

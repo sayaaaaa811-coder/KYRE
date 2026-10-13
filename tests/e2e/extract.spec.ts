@@ -5,7 +5,7 @@ const NOW = new Date("2026-10-13T10:00:00+09:00");
 
 async function extract(page: Page, text: string) {
   await page.clock.setFixedTime(NOW);
-  await page.goto("/");
+  await page.goto("/?mock=mixed");
   await expect(page.getByRole("button", { name: /10\/13\(火\)/ })).toBeVisible();
   await page.getByRole("textbox", { name: "メッセージ", exact: true }).fill(text);
   await page.getByRole("button", { name: "候補を抽出する" }).click();

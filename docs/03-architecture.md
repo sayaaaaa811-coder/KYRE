@@ -140,7 +140,11 @@ sequenceDiagram
 | `GOOGLE_REDIRECT_URI` | コールバック URL | サーバーのみ |
 | `SESSION_SECRET` | セッション暗号鍵（32 バイト乱数） | **秘密** |
 | `APP_ORIGIN` | 例: `https://schedule.kyre.example` | サーバーのみ |
-| `CALENDAR_MODE` | `google` / `mock`（開発・E2E 用） | サーバーのみ。本番で `mock` なら起動失敗させる |
+| `SESSION_SECRET_PREVIOUS` | 鍵ローテーション時の旧鍵（任意） | **秘密** |
+| `GOOGLE_ENDPOINT_OVERRIDE` | E2E 用の偽 Google サーバー。`APP_ORIGIN` が localhost のときだけ有効（本番では設定不可） | サーバーのみ |
+
+- デモ（ダミーカレンダー）はブラウザ内で動くため、サーバー側のモード切替は不要（v0.2 で `CALENDAR_MODE` を廃止）。
+- Google 連携の設定がない場合はデモのみ利用可能になる。
 
 - `.env.local` は Git に含めない（`.gitignore`）。`.env.example` に名前だけ記載。
-- 起動時に zod で検証し、不足・形式不正なら起動しない。
+- zod で検証し、不足・形式不正なら Google 連携を無効化（デモのみ）し、不正な**項目名だけ**をログに出す（値は出さない）。

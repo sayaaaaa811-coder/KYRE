@@ -1,21 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConnectSheet } from "@/components/ConnectSheet";
 import { CandidateReviewStep } from "@/components/steps/CandidateReviewStep";
 import { MessageInputStep } from "@/components/steps/MessageInputStep";
 import { ResultStep } from "@/components/steps/ResultStep";
 import { Button } from "@/components/ui/Button";
 import { StepIndicator } from "@/components/ui/StepIndicator";
 import { useStepHistory } from "@/hooks/useStepHistory";
+import { createGoogleCalendar } from "@/lib/calendar/google";
 import { createMockCalendar, isMockScenario, type MockScenario } from "@/lib/calendar/mock";
 import type { CalendarProvider } from "@/lib/calendar/types";
 import { evaluateCandidates, rangesForCandidates } from "@/lib/matcher";
 import { MAX_CANDIDATES, parseMessage } from "@/lib/parser";
+import { fetchConnectionStatus, savePending, takePending, type ConnectionStatus } from "@/lib/session-client";
 import { addDays, todayIn } from "@/lib/time";
 import { DEFAULT_SETTINGS, type CalendarFetchResult, type Candidate, type IsoDate, type Settings } from "@/lib/types";
 
 let candidateSeq = 0;
 const newCandidateId = () => `c${++candidateSeq}`;
+
+const AUTH_ERRORS: Record<string, string> = {
+  denied: "Google連携がキャンセルされました。連携するか、デモ用のカレンダーでお試しください。",
+  scope:
+    "カレンダーの空き状況へのアクセスが許可されませんでした。Googleの確認画面で、カレンダーの項目にチェックを入れて連携してください。",
+  state: "連携の確認に失敗しました。お手数ですが、もう一度お試しください。",
+  rate_limited: "短時間に操作が集中しました。少し時間をおいてからお試しください。",
+  failed: "Google連携に失敗しました。もう一度お試しください。",
+};
+
+const googleCalendar = createGoogleCalendar();
 
 export function ScheduleWizard() {
   const { step, goTo, back } = useStepHistory();
@@ -26,26 +41,89 @@ export function ScheduleWizard() {
   const [notice, setNotice] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [scenario, setScenario] = useState<MockScenario>("mixed");
+  const [demo, setDemo] = useState(false);
+  const [connection, setConnection] = useState<ConnectionStatus | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const [calendarResult, setCalendarResult] = useState<CalendarFetchResult | null>(null);
+  const [calendarKind, setCalendarKind] = useState<"mock" | "google">("mock");
   const [checkedAt, setCheckedAt] = useState<number>(0);
   const [checking, setChecking] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    // 現在日時と URL はブラウザでしか確定しないため、マウント後に設定する
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setReferenceDate(todayIn(Date.now(), DEFAULT_SETTINGS.timeZone));
-    const requested = new URLSearchParams(window.location.search).get("mock");
-    if (isMockScenario(requested)) setScenario(requested);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
-
-  // Phase 3 で Google 実装に差し替える
-  const calendar: CalendarProvider = useMemo(
+  const mockCalendar: CalendarProvider = useMemo(
     () => createMockCalendar({ scenario, timeZone: settings.timeZone, delayMs: 400 }),
     [scenario, settings.timeZone],
   );
+
+  const runCheck = useCallback(async (provider: CalendarProvider, target: Candidate[], timeZone: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setChecking(true);
+    let result: CalendarFetchResult;
+    try {
+      result = await provider.fetchBusy(rangesForCandidates(target, timeZone), { signal: controller.signal });
+    } catch {
+      result = { status: "error", code: "NETWORK" };
+    }
+    if (controller.signal.aborted) return;
+    if (result.status === "error" && result.code === "UNAUTHENTICATED") {
+      setConnection((c) => (c ? { ...c, connected: false } : c));
+    }
+    setCalendarKind(provider.kind);
+    setCalendarResult(result);
+    setCheckedAt(Date.now());
+    setChecking(false);
+  }, []);
+
+  useEffect(() => {
+    // 現在日時・URL・連携状態はブラウザでしか確定しないため、マウント後に設定する
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("mock");
+    const restore = params.get("restore") === "1";
+    const authError = params.get("auth_error");
+    if (restore || authError) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("restore");
+      url.searchParams.delete("auth_error");
+      window.history.replaceState(window.history.state, "", url);
+    }
+    const pending = restore || authError ? takePending() : null;
+    const restored = pending?.candidates.map((c) => ({ ...c, id: newCandidateId() })) ?? [];
+
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (isMockScenario(requested)) {
+      setScenario(requested);
+      setDemo(true);
+    }
+    setReferenceDate(pending?.referenceDate ?? todayIn(Date.now(), DEFAULT_SETTINGS.timeZone));
+    if (pending) {
+      setCandidates(restored);
+      setSettings(pending.settings);
+    }
+    if (authError) {
+      setNotice(AUTH_ERRORS[authError] ?? AUTH_ERRORS.failed);
+      if (pending) goTo(2);
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    let cancelled = false;
+    void fetchConnectionStatus().then((status) => {
+      if (cancelled) return;
+      setConnection(status);
+      if (!restore || !pending) return;
+      goTo(2);
+      if (status.connected && restored.length > 0) {
+        void runCheck(googleCalendar, restored, pending.settings.timeZone).then(() => goTo(3));
+      } else if (!status.connected) {
+        setNotice(AUTH_ERRORS.failed);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [goTo, runCheck]);
 
   const evaluations = useMemo(
     () =>
@@ -89,27 +167,37 @@ export function ScheduleWizard() {
     ]);
   };
 
-  const fetchCalendar = async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setChecking(true);
-    let result: CalendarFetchResult;
-    try {
-      result = await calendar.fetchBusy(rangesForCandidates(candidates, settings.timeZone), {
-        signal: controller.signal,
-      });
-    } catch {
-      result = { status: "error", code: "NETWORK" };
-    }
-    if (controller.signal.aborted) return;
-    setCalendarResult(result);
-    setCheckedAt(Date.now());
-    setChecking(false);
-  };
+  const activeProvider = (): CalendarProvider | null =>
+    demo ? mockCalendar : connection?.connected ? googleCalendar : null;
 
   const check = async () => {
-    await fetchCalendar();
+    const provider = activeProvider();
+    if (!provider) {
+      setSheetOpen(true);
+      return;
+    }
+    await runCheck(provider, candidates, settings.timeZone);
+    goTo(3);
+  };
+
+  const retry = () => {
+    const provider = activeProvider();
+    if (provider) void runCheck(provider, candidates, settings.timeZone);
+    else setSheetOpen(true);
+  };
+
+  const connectGoogle = () => {
+    if (!referenceDate) return;
+    savePending({ referenceDate, candidates, settings });
+    // API ルートへの通常の画面遷移（Google の同意画面へリダイレクトされる）
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/api/auth/google/start");
+  };
+
+  const startDemo = async () => {
+    setSheetOpen(false);
+    setDemo(true);
+    await runCheck(mockCalendar, candidates, settings.timeZone);
     goTo(3);
   };
 
@@ -131,8 +219,23 @@ export function ScheduleWizard() {
           <span className="block font-serif text-lg tracking-[0.35em] text-ink">KYRE</span>
           <span className="mt-1 block text-[10px] tracking-[0.3em] text-gold">SCHEDULE</span>
         </h1>
-        <div className="flex w-20 justify-end">
+        <div className="flex w-20 items-center justify-end gap-2">
           <StepIndicator current={step} />
+          <Link
+            href="/settings"
+            aria-label="設定"
+            className="-mr-2 flex size-11 items-center justify-center rounded-full text-sub hover:text-ink"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+              <path
+                d="M4 7h16M4 12h16M4 17h16"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </svg>
+          </Link>
         </div>
       </header>
 
@@ -168,11 +271,12 @@ export function ScheduleWizard() {
               candidates={candidates}
               evaluations={evaluations}
               settings={settings}
-              calendarKind={calendar.kind}
-              fetchFailed={calendarResult.status === "error"}
+              calendarKind={calendarKind}
+              errorCode={calendarResult.status === "error" ? calendarResult.code : null}
               retrying={checking}
               onSettingsChange={setSettings}
-              onRetry={fetchCalendar}
+              onRetry={retry}
+              onReconnect={connectGoogle}
               onEditCandidates={back}
             />
           ) : (
@@ -184,6 +288,14 @@ export function ScheduleWizard() {
             </div>
           ))}
       </main>
+
+      <ConnectSheet
+        open={sheetOpen}
+        configured={connection?.configured ?? false}
+        onConnect={connectGoogle}
+        onDemo={startDemo}
+        onClose={() => setSheetOpen(false)}
+      />
     </div>
   );
 }
