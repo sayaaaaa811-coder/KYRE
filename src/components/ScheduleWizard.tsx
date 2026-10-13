@@ -266,7 +266,7 @@ export function ScheduleWizard() {
         </div>
         <h1 className="text-center leading-none">
           <span className="block font-serif text-lg tracking-[0.35em] text-ink">KYRE</span>
-          <span className="mt-1 block text-[10px] tracking-[0.3em] text-gold">SCHEDULE</span>
+          <span className="mt-1 block text-[10px] tracking-[0.3em] text-gold-deep">SCHEDULE</span>
         </h1>
         <div className="flex w-20 items-center justify-end gap-2">
           <StepIndicator current={step} />

@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 import { DEFAULT_SETTINGS } from "@/lib/types";
 import { getServerConfig } from "@/server/env";
-import { parseFreeBusyRequest } from "@/server/freebusy-request";
+import { MAX_BODY_BYTES, parseFreeBusyRequest } from "@/server/freebusy-request";
 import { fetchFreeBusy } from "@/server/google-freebusy";
-import { isTrustedRequest, json, jsonError } from "@/server/http";
+import { isTrustedRequest, json, jsonError, readBodyLimited } from "@/server/http";
 import { logEvent } from "@/server/logger";
 import { RATE_LIMITS, clientIp, consume } from "@/server/rate-limit";
 import { cookieNames, cookieOptions, unsealSession } from "@/server/session";
@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
   }
   if (!consume(`fb:sid:${session.sessionId}`, RATE_LIMITS.freeBusyPerSession)) return jsonError(429, "RATE_LIMITED");
 
-  const ranges = parseFreeBusyRequest(await request.text());
+  const text = await readBodyLimited(request, MAX_BODY_BYTES);
+  if (text === null) return jsonError(413, "TOO_LARGE");
+  const ranges = parseFreeBusyRequest(text);
   if (!ranges) return jsonError(400, "BAD_REQUEST");
 
   const result = await fetchFreeBusy(config, session.accessToken, ranges, DEFAULT_SETTINGS.timeZone);

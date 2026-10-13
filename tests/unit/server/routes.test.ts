@@ -207,6 +207,19 @@ describe("POST /api/freebusy", () => {
     expect(res.status).toBe(400);
   });
 
+  it("大きすぎる本文 → 413（読み込みを途中で打ち切る）", async () => {
+    const res = await freebusy(
+      req("/api/freebusy", {
+        method: "POST",
+        headers: trusted,
+        cookie: await sessionCookie(),
+        body: " ".repeat(10_000),
+      }),
+    );
+    expect(res.status).toBe(413);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("Google が 401 → 401 と Cookie 削除", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}, 401));
     const res = await freebusy(

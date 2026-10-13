@@ -21,3 +21,27 @@ export function redirectHome(config: Pick<ServerConfig, "appOrigin">, query: Rec
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   return NextResponse.redirect(url, { status: 303, headers: { "Cache-Control": "no-store" } });
 }
+
+/**
+ * リクエスト本文を上限付きで読む（巨大な本文でメモリを消費させない）。
+ * 上限を超えたら読み込みを中断して null を返す。
+ */
+export async function readBodyLimited(request: Request, maxBytes: number): Promise<string | null> {
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > maxBytes) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}

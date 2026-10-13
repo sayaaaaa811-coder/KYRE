@@ -11,7 +11,7 @@ export function PageShell({ title, children }: { title: string; children: ReactN
         </Link>
         <p className="text-center leading-none">
           <span className="block font-serif text-lg tracking-[0.35em] text-ink">KYRE</span>
-          <span className="mt-1 block text-[10px] tracking-[0.3em] text-gold">SCHEDULE</span>
+          <span className="mt-1 block text-[10px] tracking-[0.3em] text-gold-deep">SCHEDULE</span>
         </p>
         <span className="w-20" />
       </header>
