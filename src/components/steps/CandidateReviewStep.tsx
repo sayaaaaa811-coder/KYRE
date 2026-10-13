@@ -43,7 +43,9 @@ export function CandidateReviewStep({
 
       {notice && (
         <div className="mt-4">
-          <Notice>{notice}</Notice>
+          <Notice>
+            <span className="whitespace-pre-line">{notice}</span>
+          </Notice>
         </div>
       )}
 

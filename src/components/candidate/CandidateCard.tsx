@@ -45,17 +45,40 @@ export function CandidateCard({
       {ambiguous && (
         <div className="mt-2 rounded-xl bg-gold-soft px-3 py-2">
           <p className="text-xs font-bold tracking-wider text-gold-deep">要確認</p>
-          <ul className="mt-1 text-sm text-ink">
+          <ul className="mt-1 space-y-2 text-sm text-ink">
             {candidate.ambiguities.map((a) => (
-              <li key={a.kind}>{a.message}</li>
+              <li key={a.kind}>
+                {a.message}
+                {a.options && (
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {a.options.map((o) => (
+                      <button
+                        key={o.label}
+                        type="button"
+                        onClick={() =>
+                          onChange({
+                            ...candidate,
+                            date: o.date ?? candidate.date,
+                            startTime: o.startTime ?? candidate.startTime,
+                            ambiguities: candidate.ambiguities.filter((x) => x.kind !== a.kind),
+                          })
+                        }
+                        className="min-h-10 rounded-lg border border-gold bg-paper px-3 text-sm hover:bg-ivory"
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
             ))}
           </ul>
           <button
             type="button"
             onClick={() => onChange({ ...candidate, ambiguities: [] })}
-            className="mt-2 min-h-10 rounded-lg border border-gold bg-paper px-3 text-sm"
+            className="mt-3 min-h-10 rounded-lg bg-ink px-3 text-sm text-paper"
           >
-            この日時で確定する
+            表示中の日時で確定する
           </button>
         </div>
       )}
@@ -68,7 +91,7 @@ export function CandidateCard({
             type="date"
             required
             value={candidate.date}
-            onChange={(e) => onChange({ ...candidate, date: e.target.value })}
+            onChange={(e) => onChange({ ...candidate, date: e.target.value, ambiguities: [] })}
             className="mt-1 block min-h-11 w-full rounded-lg border border-line bg-ivory px-3 text-base text-ink"
           />
         </label>
@@ -80,7 +103,7 @@ export function CandidateCard({
             step={900}
             required
             value={candidate.startTime}
-            onChange={(e) => onChange({ ...candidate, startTime: e.target.value })}
+            onChange={(e) => onChange({ ...candidate, startTime: e.target.value, ambiguities: [] })}
             className="mt-1 block min-h-11 w-full rounded-lg border border-line bg-ivory px-3 text-base text-ink"
           />
         </label>

@@ -3,7 +3,7 @@
 LINE などで届いた日程候補を貼り付けると、Google カレンダーの空き状況と照合して、参加できる日時・代替案・返信文を提示する無料 Web アプリ（開発中）。
 
 - 設計書: [docs/README.md](docs/README.md)
-- 進捗報告: [docs/progress/](docs/progress/)
+- 進捗報告: [Phase 1](docs/progress/phase-1.md) / [Phase 2](docs/progress/phase-2.md)
 
 ## 自分のパソコンで動かす手順（初心者向け）
 
@@ -35,7 +35,7 @@ npm run dev
 
 - ダミーカレンダーの状態を変えて試せます（URL の末尾に付けます）
   - `?mock=mixed`（初期値）: 毎日 12:00–13:00、偶数日は 18:30–20:00 が予定あり。7 の倍数の日は終日予定
-  - `?mock=all_free`: 予定なし / `?mock=all_busy`: 毎日 9–23 時が予定あり
+  - `?mock=all_free`: 予定なし / `?mock=all_busy`: 毎日 9–23 時が予定あり（代替案は時間帯の設定次第で早朝・深夜に出ます）
   - `?mock=all_day`: 全日が終日予定 / `?mock=error`: 予定の取得に失敗
 
 ### 3. テストを実行する

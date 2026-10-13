@@ -10,9 +10,7 @@ async function open(page: Page, query = "") {
 }
 
 async function goToReview(page: Page) {
-  await page
-    .getByRole("textbox", { name: "メッセージ", exact: true })
-    .fill("来週どこか飲みに行こう！ 19日か20日の19時〜どう？");
+  await page.getByRole("textbox", { name: "メッセージ", exact: true }).fill("今度みんなで飲みに行こう！");
   await page.getByRole("button", { name: "候補を抽出する" }).click();
   await expect(page).toHaveURL(/step=2/);
 }
@@ -31,8 +29,8 @@ test("入力 → 確認 → 照合（ダミーカレンダー）で参加可否�
   await expect(page.getByRole("button", { name: "候補を抽出する" })).toBeDisabled();
   await goToReview(page);
 
-  // Phase 1 は自動抽出なし → 案内が出る
-  await expect(page.getByText("日時を自動で見つけられませんでした")).toBeVisible();
+  // 日時が書かれていない → 案内が出る
+  await expect(page.getByText("日時を見つけられませんでした")).toBeVisible();
   await expect(page.getByRole("button", { name: "空き状況を確認する" })).toBeDisabled();
 
   await addCandidate(page, "2026-10-19", "19:00");
@@ -77,7 +75,7 @@ test("ブラウザの戻る操作で候補確認に戻り、入力内容が残�
   await expect(page.getByText("10/19(月)")).toBeVisible();
 
   await page.goBack();
-  await expect(page.getByRole("textbox", { name: "メッセージ", exact: true })).toHaveValue(/19日か20日/);
+  await expect(page.getByRole("textbox", { name: "メッセージ", exact: true })).toHaveValue(/飲みに行こう/);
 });
 
 test("予定を取得できない場合、参加可能と表示しない", async ({ page }) => {

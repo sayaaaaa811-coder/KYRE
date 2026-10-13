@@ -51,10 +51,31 @@ export function isValidActiveHours(h: ActiveHours): boolean {
   );
 }
 
+/** 曖昧さを解消するための選択肢（選ぶとその日付・時刻に置き換える） */
+export interface AmbiguityOption {
+  label: string;
+  date?: IsoDate;
+  startTime?: TimeOfDay;
+}
+
+export type AmbiguityKind =
+  | "ampm"
+  | "period"
+  | "no_time"
+  | "inherited_time"
+  | "no_date"
+  | "month_inferred"
+  | "weekday_mismatch"
+  | "relative_week"
+  | "same_weekday"
+  | "far_future"
+  | "past";
+
 /** 抽出結果の曖昧さ。ユーザーが確認するまで照合できない。 */
 export interface Ambiguity {
-  kind: string;
+  kind: AmbiguityKind;
   message: string;
+  options?: AmbiguityOption[];
 }
 
 export interface Candidate {

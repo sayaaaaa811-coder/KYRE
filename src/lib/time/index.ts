@@ -88,6 +88,25 @@ export function todayIn(nowMs: number, timeZone: string): IsoDate {
   return epochToZoned(nowMs, timeZone).date;
 }
 
+/** 曜日（0 = 日曜 … 6 = 土曜） */
+export function dayOfWeek(date: IsoDate): number {
+  const { year, month, day } = parseIsoDate(date);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+/** b − a の日数 */
+export function diffDays(a: IsoDate, b: IsoDate): number {
+  const pa = parseIsoDate(a);
+  const pb = parseIsoDate(b);
+  return Math.round((Date.UTC(pb.year, pb.month - 1, pb.day) - Date.UTC(pa.year, pa.month - 1, pa.day)) / 86_400_000);
+}
+
+/** 実在する暦日なら IsoDate、そうでなければ null */
+export function makeIsoDate(year: number, month: number, day: number): IsoDate | null {
+  const date = toIsoDate(year, month, day);
+  return isValidIsoDate(date) ? date : null;
+}
+
 export function weekdayJa(date: IsoDate): string {
   const { year, month, day } = parseIsoDate(date);
   return WEEKDAYS_JA[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];

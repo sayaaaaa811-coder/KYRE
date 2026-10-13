@@ -64,9 +64,14 @@ export function ScheduleWizard() {
     const result = parseMessage(message, { referenceDate, timeZone: settings.timeZone });
     const found = result.candidates.slice(0, MAX_CANDIDATES).map((c) => ({ ...c, id: newCandidateId() }));
     updateCandidates(found);
-    setNotice(
-      found.length === 0 ? "日時を自動で見つけられませんでした。「＋ 候補を追加」から入力してください。" : null,
-    );
+    const notes: string[] = [];
+    if (found.length === 0) notes.push("日時を見つけられませんでした。「＋ 候補を追加」から入力してください。");
+    if (result.truncated) notes.push(`候補が多いため、先頭の${MAX_CANDIDATES}件だけを表示しています。`);
+    if (result.durationHintMinutes && result.durationHintMinutes !== settings.durationMinutes) {
+      setSettings({ ...settings, durationMinutes: result.durationHintMinutes });
+      notes.push(`メッセージの時間に合わせて、所要時間を${result.durationHintMinutes}分にしました。`);
+    }
+    setNotice(notes.length > 0 ? notes.join("\n") : null);
     goTo(2);
   };
 
