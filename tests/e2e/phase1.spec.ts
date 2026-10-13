@@ -136,3 +136,26 @@ test("候補を削除できる・要確認なしなら照合ボタンが有効",
   await expect(page.getByRole("heading", { name: "1件の候補" })).toBeVisible();
   await expect(page.getByRole("button", { name: "空き状況を確認する" })).toBeEnabled();
 });
+
+test("提案する時間帯を選ぶと、その範囲内だけで代替案を探す（初期値は 24 時間）", async ({ page }) => {
+  await open(page);
+  await goToReview(page);
+  await addCandidate(page, "2026-10-20", "19:00");
+  await expect(page.getByRole("button", { name: "24時間" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByLabel("時間帯の開始").selectOption("20");
+  await page.getByLabel("時間帯の終了").selectOption("22");
+  await page.getByRole("button", { name: "空き状況を確認する" }).click();
+
+  const card = resultCards(page).first();
+  await expect(card.getByRole("list", { name: "代替案" }).getByRole("listitem")).toHaveText(["20:15〜", "20:30〜"]);
+  await expect(page.getByText("提案する時間帯: 20:00〜22:00")).toBeVisible();
+
+  // 結果画面で 24 時間に戻すと即時に再判定される
+  await page.getByRole("button", { name: "変更" }).click();
+  await page.getByRole("button", { name: "24時間" }).click();
+  await expect(card.getByRole("list", { name: "代替案" }).getByRole("listitem")).toHaveText([
+    "20:15〜",
+    "20:30〜",
+    "20:45〜",
+  ]);
+});

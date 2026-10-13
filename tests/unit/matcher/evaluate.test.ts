@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { evaluateCandidates, rangesForCandidates } from "@/lib/matcher";
 import { dayRange, formatTime, zonedToEpoch } from "@/lib/time";
-import type { BufferMinutes, CalendarFetchResult, Candidate, DurationMinutes, Interval, Settings } from "@/lib/types";
+import type {
+  ActiveHours,
+  BufferMinutes,
+  CalendarFetchResult,
+  Candidate,
+  DurationMinutes,
+  Interval,
+  Settings,
+} from "@/lib/types";
 
 const TZ = "Asia/Tokyo";
 const DATE = "2026-10-21";
@@ -18,11 +26,17 @@ const candidate = (startTime: string, date = DATE, id = "c1"): Candidate => ({
   startTime,
   ambiguities: [],
 });
-const settings = (durationMinutes: DurationMinutes = 90, bufferMinutes: BufferMinutes = 15): Settings => ({
+const settings = (
+  durationMinutes: DurationMinutes = 90,
+  bufferMinutes: BufferMinutes = 15,
+  activeHours: ActiveHours = { startHour: 0, endHour: 24 },
+): Settings => ({
   durationMinutes,
   bufferMinutes,
+  activeHours,
   timeZone: TZ,
 });
+const DAYTIME: ActiveHours = { startHour: 9, endHour: 23 };
 const ok = (intervals: Interval[], dates: string[] = [DATE]): CalendarFetchResult => ({
   status: "ok",
   busy: intervals,
@@ -120,20 +134,44 @@ describe("代替探索の優先順と範囲", () => {
     expect(r2.status).toBe("busy_no_alternatives");
   });
 
-  it("09:00 より前に始まる枠は提案しない", () => {
-    const r = evaluateOne("10:00", ok([busy("09:00", "12:00")]), settings(60, 0));
+  it("時間帯 9〜23 時: 09:00 より前に始まる枠は提案しない", () => {
+    const r = evaluateOne("10:00", ok([busy("09:00", "12:00")]), settings(60, 0, DAYTIME));
     // 08:00, 08:45 等は対象外。12:00 以降の +120, +135, +150
     expect(times(r.alternatives)).toEqual(["12:00", "12:15", "12:30"]);
   });
 
-  it("09:00 開始ちょうどは提案できる", () => {
-    const r = evaluateOne("10:00", ok([busy("10:00", "12:00")]), settings(60, 0));
+  it("時間帯 9〜23 時: 09:00 開始ちょうどは提案できる", () => {
+    const r = evaluateOne("10:00", ok([busy("10:00", "12:00")]), settings(60, 0, DAYTIME));
     expect(times(r.alternatives)).toContain("09:00");
   });
 
-  it("23:00 を超えて終わる枠は提案しない（23:00 ちょうどは可）", () => {
-    const r = evaluateOne("21:00", ok([busy("20:00", "21:30")]), settings(90, 0));
+  it("時間帯 9〜23 時: 23:00 を超えて終わる枠は提案しない（23:00 ちょうどは可）", () => {
+    const r = evaluateOne("21:00", ok([busy("20:00", "21:30")]), settings(90, 0, DAYTIME));
     expect(times(r.alternatives)).toEqual(["21:30", "18:30", "18:15"]);
+  });
+
+  it("初期値（24 時間）なら早朝・深夜の枠も提案する（ただし日付はまたがない）", () => {
+    const early = evaluateOne("08:00", ok([busy("08:00", "09:00")]), settings(60, 0));
+    expect(times(early.alternatives)).toEqual(["09:00", "07:00", "09:15"]);
+    const late = evaluateOne("22:00", ok([busy("21:00", "22:30")]), settings(90, 0));
+    expect(times(late.alternatives)).toEqual(["22:30", "19:30", "19:15"]);
+  });
+
+  it("ユーザーが選んだ時間帯（18〜22 時）の外は提案しない", () => {
+    const evening = { startHour: 18, endHour: 22 };
+    const r = evaluateOne("19:00", ok([busy("19:00", "20:00")]), settings(60, 0, evening));
+    expect(times(r.alternatives)).toEqual(["20:00", "18:00", "20:15"]);
+    const narrow = evaluateOne("19:00", ok([busy("18:00", "21:00")]), settings(60, 0, evening));
+    expect(times(narrow.alternatives)).toEqual(["21:00"]);
+  });
+
+  it("時間帯の外にある元の候補自体は判定する", () => {
+    expect(evaluateOne("07:00", ok([]), settings(60, 0, DAYTIME)).status).toBe("available");
+  });
+
+  it("不正な時間帯（開始 ≥ 終了）では代替を出さない", () => {
+    const r = evaluateOne("19:00", ok([busy("19:00", "20:00")]), settings(60, 0, { startHour: 20, endHour: 20 }));
+    expect(r.status).toBe("busy_no_alternatives");
   });
 
   it("前後 3 時間に空きがなければ代替なし", () => {
@@ -186,7 +224,9 @@ describe("終日予定", () => {
     // カレンダーのタイムゾーンが UTC の場合、JST では 9:00〜翌 9:00 になる
     const utcAllDay = { start: Date.parse("2026-10-21T00:00:00Z"), end: Date.parse("2026-10-22T00:00:00Z") };
     expect(evaluateOne("08:00", ok([utcAllDay]), settings(30, 0)).status).toBe("available");
-    expect(evaluateOne("09:00", ok([utcAllDay]), settings(30, 0)).status).toBe("busy_no_alternatives");
+    const r = evaluateOne("09:00", ok([utcAllDay]), settings(30, 0));
+    expect(r.status).toBe("busy_with_alternatives");
+    expect(times(r.alternatives)).toEqual(["08:30", "08:15", "08:00"]);
   });
 });
 
@@ -236,10 +276,6 @@ describe("判定対象外", () => {
   it("取得失敗より日付またぎ・過去の判定を優先する", () => {
     const r = evaluateOne("23:00", { status: "error", code: "NETWORK" }, settings(90, 0));
     expect(r.reason).toBe("crosses_midnight");
-  });
-
-  it("09:00〜23:00 外の元の候補自体は判定する", () => {
-    expect(evaluateOne("08:00", ok([]), settings(60, 0)).status).toBe("available");
   });
 });
 

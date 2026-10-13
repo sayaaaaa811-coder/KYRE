@@ -1,5 +1,6 @@
 "use client";
 
+import { ActiveHoursControl } from "@/components/ActiveHoursControl";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { BUFFER_OPTIONS, DURATION_OPTIONS, type Settings } from "@/lib/types";
 
@@ -25,6 +26,10 @@ export function SettingsControls({
         value={settings.bufferMinutes}
         onChange={(bufferMinutes) => onChange({ ...settings, bufferMinutes })}
         format={(v) => (v === 0 ? "なし" : `${v}分`)}
+      />
+      <ActiveHoursControl
+        value={settings.activeHours}
+        onChange={(activeHours) => onChange({ ...settings, activeHours })}
       />
     </>
   );

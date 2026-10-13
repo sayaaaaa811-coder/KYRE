@@ -53,6 +53,7 @@ export function evaluateCandidates(input: EvaluateInput): CandidateEvaluation[] 
       start,
       date: candidate.date,
       durationMinutes: settings.durationMinutes,
+      activeHours: settings.activeHours,
       mergedBusy,
       timeZone: settings.timeZone,
       now,

@@ -54,6 +54,14 @@ export function zonedToEpoch(date: IsoDate, time: TimeOfDay, timeZone: string): 
   return new TZDate(year, month - 1, day, hour, minute, timeZone).getTime();
 }
 
+/** その日の hour 時（0〜24。24 は翌日 0:00）の絶対時刻 */
+export function zonedHourToEpoch(date: IsoDate, hour: number, timeZone: string): number {
+  if (!Number.isInteger(hour) || hour < 0 || hour > 24) throw new Error("Invalid hour");
+  return hour === 24
+    ? zonedToEpoch(addDays(date, 1), "00:00", timeZone)
+    : zonedToEpoch(date, `${pad2(hour)}:00`, timeZone);
+}
+
 export function addDays(date: IsoDate, days: number): IsoDate {
   const { year, month, day } = parseIsoDate(date);
   const d = new Date(Date.UTC(year, month - 1, day + days));

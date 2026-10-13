@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { evaluateCandidates } from "@/lib/matcher";
 import { MATCH_RULES } from "@/lib/matcher/rules";
 import { expandIntervals, mergeIntervals, overlapsAny } from "@/lib/matcher/intervals";
-import { MINUTE_MS, dayRange, zonedToEpoch } from "@/lib/time";
+import { MINUTE_MS, dayRange, zonedHourToEpoch, zonedToEpoch } from "@/lib/time";
 import { BUFFER_OPTIONS, DURATION_OPTIONS, type Interval } from "@/lib/types";
 
 const TZ = "Asia/Tokyo";
@@ -34,16 +34,20 @@ describe("照合ロジックの性質（ランダム検証）", () => {
         timeArb,
         fc.constantFrom(...DURATION_OPTIONS),
         fc.constantFrom(...BUFFER_OPTIONS),
-        (busy, startTime, durationMinutes, bufferMinutes) => {
+        fc
+          .tuple(fc.integer({ min: 0, max: 24 }), fc.integer({ min: 0, max: 24 }))
+          .filter(([a, b]) => a < b)
+          .map(([startHour, endHour]) => ({ startHour, endHour })),
+        (busy, startTime, durationMinutes, bufferMinutes, activeHours) => {
           const [r] = evaluateCandidates({
             candidates: [{ id: "x", date: DATE, startTime, ambiguities: [] }],
             calendar: { status: "ok", busy, coveredRanges: [DAY] },
-            settings: { durationMinutes, bufferMinutes, timeZone: TZ },
+            settings: { durationMinutes, bufferMinutes, activeHours, timeZone: TZ },
             now: NOW,
           });
           const merged = mergeIntervals(expandIntervals(busy, bufferMinutes));
-          const windowStart = zonedToEpoch(DATE, MATCH_RULES.proposalStart, TZ);
-          const windowEnd = zonedToEpoch(DATE, MATCH_RULES.proposalEnd, TZ);
+          const windowStart = zonedHourToEpoch(DATE, activeHours.startHour, TZ);
+          const windowEnd = zonedHourToEpoch(DATE, activeHours.endHour, TZ);
           const range = MATCH_RULES.searchRangeMinutes * MINUTE_MS;
 
           if (r.status === "available") expect(overlapsAny(r.slot, merged)).toBe(false);
@@ -73,7 +77,7 @@ describe("照合ロジックの性質（ランダム検証）", () => {
         const [r] = evaluateCandidates({
           candidates: [{ id: "x", date: DATE, startTime, ambiguities: [] }],
           calendar: { status: "error", code: "FETCH_FAILED" },
-          settings: { durationMinutes, bufferMinutes: 15, timeZone: TZ },
+          settings: { durationMinutes, bufferMinutes: 15, activeHours: { startHour: 0, endHour: 24 }, timeZone: TZ },
           now: NOW,
         });
         expect(r.status === "available" || r.alternatives.length > 0).toBe(false);

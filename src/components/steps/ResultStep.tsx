@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatActiveHours } from "@/components/ActiveHoursControl";
 import { ResultCard } from "@/components/result/ResultCard";
 import { SettingsControls } from "@/components/SettingsControls";
 import { Button } from "@/components/ui/Button";
@@ -74,6 +75,8 @@ export function ResultStep({
           <p className="text-sm">
             所要{settings.durationMinutes}分・前後の余裕
             {settings.bufferMinutes === 0 ? "なし" : `${settings.bufferMinutes}分`}
+            <br />
+            <span className="text-sub">提案する時間帯: {formatActiveHours(settings.activeHours)}</span>
           </p>
           <button
             type="button"

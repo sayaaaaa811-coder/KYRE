@@ -1,5 +1,5 @@
-import type { Interval, IsoDate } from "@/lib/types";
-import { MINUTE_MS, zonedToEpoch } from "@/lib/time";
+import { isValidActiveHours, type ActiveHours, type Interval, type IsoDate } from "@/lib/types";
+import { MINUTE_MS, zonedHourToEpoch } from "@/lib/time";
 import { overlapsAny } from "./intervals";
 import { MATCH_RULES, type MatchRules } from "./rules";
 
@@ -18,9 +18,11 @@ export function searchOffsets(rangeMinutes: number, stepMinutes: number): number
 export interface AlternativeSearchInput {
   /** 元の候補の開始時刻（エポックミリ秒） */
   start: number;
-  /** 候補の暦日（提案可能時間の基準） */
+  /** 候補の暦日（提案する時間帯の基準） */
   date: IsoDate;
   durationMinutes: number;
+  /** 提案する時間帯 */
+  activeHours: ActiveHours;
   /** 余裕時間で拡張・統合済みの busy 区間 */
   mergedBusy: readonly Interval[];
   timeZone: string;
@@ -31,9 +33,10 @@ export interface AlternativeSearchInput {
 
 export function findAlternatives(input: AlternativeSearchInput): Interval[] {
   const rules = input.rules ?? MATCH_RULES;
+  if (!isValidActiveHours(input.activeHours)) return [];
   const duration = input.durationMinutes * MINUTE_MS;
-  const windowStart = zonedToEpoch(input.date, rules.proposalStart, input.timeZone);
-  const windowEnd = zonedToEpoch(input.date, rules.proposalEnd, input.timeZone);
+  const windowStart = zonedHourToEpoch(input.date, input.activeHours.startHour, input.timeZone);
+  const windowEnd = zonedHourToEpoch(input.date, input.activeHours.endHour, input.timeZone);
 
   const result: Interval[] = [];
   for (const offset of searchOffsets(rules.searchRangeMinutes, rules.stepMinutes)) {

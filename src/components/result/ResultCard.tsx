@@ -6,7 +6,7 @@ const STATUS_VIEW = {
   busy_with_alternatives: { mark: "×", label: "予定があります", card: "border-line bg-paper", markClass: "text-sub" },
   busy_no_alternatives: {
     mark: "×",
-    label: "予定があります（前後3時間に空きなし）",
+    label: "予定があります（前後3時間・指定の時間帯に空きなし）",
     card: "border-line bg-paper",
     markClass: "text-sub",
   },

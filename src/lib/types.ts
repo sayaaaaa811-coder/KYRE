@@ -15,17 +15,41 @@ export const BUFFER_OPTIONS = [0, 15, 30, 60] as const;
 export type DurationMinutes = (typeof DURATION_OPTIONS)[number];
 export type BufferMinutes = (typeof BUFFER_OPTIONS)[number];
 
+/**
+ * 代替案を提案する時間帯（時、0〜24）。startHour < endHour。
+ * 枠の開始が startHour 以降、終了が endHour 以前のものだけを提案する。
+ * 初期値は 0〜24（24 時間いつでも）。
+ */
+export interface ActiveHours {
+  startHour: number;
+  endHour: number;
+}
+
+export const ALL_DAY_HOURS: ActiveHours = { startHour: 0, endHour: 24 };
+
 export interface Settings {
   durationMinutes: DurationMinutes;
   bufferMinutes: BufferMinutes;
+  activeHours: ActiveHours;
   timeZone: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   durationMinutes: 90,
   bufferMinutes: 15,
+  activeHours: ALL_DAY_HOURS,
   timeZone: "Asia/Tokyo",
 };
+
+export function isValidActiveHours(h: ActiveHours): boolean {
+  return (
+    Number.isInteger(h.startHour) &&
+    Number.isInteger(h.endHour) &&
+    h.startHour >= 0 &&
+    h.endHour <= 24 &&
+    h.startHour < h.endHour
+  );
+}
 
 /** 抽出結果の曖昧さ。ユーザーが確認するまで照合できない。 */
 export interface Ambiguity {
