@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConnectSheet } from "@/components/ConnectSheet";
+import { ReplyStep } from "@/components/steps/ReplyStep";
+import { Toast, type ToastMessage } from "@/components/ui/Toast";
+import { copyText } from "@/lib/clipboard";
 import { CandidateReviewStep } from "@/components/steps/CandidateReviewStep";
 import { MessageInputStep } from "@/components/steps/MessageInputStep";
 import { ResultStep } from "@/components/steps/ResultStep";
@@ -14,6 +17,13 @@ import { createMockCalendar, isMockScenario, type MockScenario } from "@/lib/cal
 import type { CalendarProvider } from "@/lib/calendar/types";
 import { evaluateCandidates, rangesForCandidates } from "@/lib/matcher";
 import { MAX_CANDIDATES, parseMessage } from "@/lib/parser";
+import {
+  canGenerateReply,
+  defaultSelectedAlternatives,
+  generateReply,
+  toggleAlternative,
+  type Tone,
+} from "@/lib/reply";
 import { fetchConnectionStatus, savePending, takePending, type ConnectionStatus } from "@/lib/session-client";
 import { addDays, todayIn } from "@/lib/time";
 import { DEFAULT_SETTINGS, type CalendarFetchResult, type Candidate, type IsoDate, type Settings } from "@/lib/types";
@@ -49,6 +59,12 @@ export function ScheduleWizard() {
   const [calendarKind, setCalendarKind] = useState<"mock" | "google">("mock");
   const [checkedAt, setCheckedAt] = useState<number>(0);
   const [checking, setChecking] = useState(false);
+  const [tone, setTone] = useState<Tone>("casual");
+  /** ユーザーが選んだ代替案（未操作なら null = 初期選択） */
+  const [chosenAlternatives, setChosenAlternatives] = useState<Record<string, readonly number[]> | null>(null);
+  /** 編集中の返信文（どの自動作成文を元にしたか base で管理） */
+  const [draft, setDraft] = useState<{ base: string; text: string } | null>(null);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const mockCalendar: CalendarProvider = useMemo(
@@ -73,6 +89,7 @@ export function ScheduleWizard() {
     }
     setCalendarKind(provider.kind);
     setCalendarResult(result);
+    setChosenAlternatives(null);
     setCheckedAt(Date.now());
     setChecking(false);
   }, []);
@@ -130,6 +147,38 @@ export function ScheduleWizard() {
       calendarResult ? evaluateCandidates({ candidates, calendar: calendarResult, settings, now: checkedAt }) : [],
     [calendarResult, candidates, settings, checkedAt],
   );
+
+  const selectedAlternatives = chosenAlternatives ?? defaultSelectedAlternatives(evaluations);
+  const generatedReply =
+    calendarResult && canGenerateReply(evaluations)
+      ? generateReply({ candidates, evaluations, selectedAlternatives, tone, timeZone: settings.timeZone })
+      : null;
+  // 元になった自動作成文が変わったら（代替案の選択・設定の変更など）、編集内容は破棄する
+  const activeDraft = draft && generatedReply !== null && draft.base === generatedReply ? draft : null;
+  const replyText = activeDraft?.text ?? generatedReply;
+
+  const showToast = useCallback((text: string, toastTone: ToastMessage["tone"] = "info") => {
+    setToast({ id: Date.now(), text, tone: toastTone });
+  }, []);
+  const hideToast = useCallback(() => setToast(null), []);
+
+  const copyReply = async (text: string | null) => {
+    if (!text) return;
+    const ok = await copyText(text);
+    if (ok) showToast("コピーしました。LINEに戻って貼り付けてください");
+    else showToast("コピーできませんでした。文章を長押ししてコピーしてください", "alert");
+  };
+
+  const restart = () => {
+    setMessage("");
+    setCandidates([]);
+    setCalendarResult(null);
+    setChosenAlternatives(null);
+    setDraft(null);
+    setNotice(null);
+    setReferenceDate(todayIn(Date.now(), DEFAULT_SETTINGS.timeZone));
+    goTo(1);
+  };
 
   const updateCandidates = (next: Candidate[]) => {
     setCandidates(next);
@@ -277,6 +326,15 @@ export function ScheduleWizard() {
               onSettingsChange={setSettings}
               onRetry={retry}
               onReconnect={connectGoogle}
+              tone={tone}
+              onToneChange={setTone}
+              replyText={replyText}
+              selectedAlternatives={selectedAlternatives}
+              onToggleAlternative={(id, start) =>
+                setChosenAlternatives(toggleAlternative(selectedAlternatives, id, start))
+              }
+              onCopy={() => void copyReply(replyText)}
+              onEditReply={() => goTo(4)}
               onEditCandidates={back}
             />
           ) : (
@@ -287,7 +345,33 @@ export function ScheduleWizard() {
               </Button>
             </div>
           ))}
+
+        {step === 4 &&
+          (replyText !== null && generatedReply !== null ? (
+            <ReplyStep
+              text={replyText}
+              edited={activeDraft !== null && activeDraft.text !== generatedReply}
+              tone={tone}
+              onToneChange={(t) => {
+                setTone(t);
+                setDraft(null);
+              }}
+              onTextChange={(text) => setDraft({ base: generatedReply, text })}
+              onReset={() => setDraft(null)}
+              onCopy={() => void copyReply(replyText)}
+              onRestart={restart}
+            />
+          ) : (
+            <div className="animate-fade-in space-y-4">
+              <p className="text-sm text-sub">返信文を作成するには、先に空き状況を確認してください。</p>
+              <Button className="w-full" onClick={() => goTo(2)}>
+                候補の確認に戻る
+              </Button>
+            </div>
+          ))}
       </main>
+
+      <Toast message={toast} onDone={hideToast} />
 
       <ConnectSheet
         open={sheetOpen}

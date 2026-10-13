@@ -64,7 +64,7 @@ test("未連携 → Google 連携 → 戻ると候補が復元され、自動で
   expect(await page.evaluate(() => document.cookie)).not.toContain("kyre_session");
 
   // 2 回目以降は連携済みなのでシートは出ない
-  await page.getByRole("button", { name: "候補を修正する" }).click();
+  await page.getByRole("button", { name: "候補を修正" }).click();
   await page.getByRole("button", { name: "空き状況を確認する" }).click();
   await expect(page).toHaveURL(/step=3/);
   await expect(page.getByRole("dialog")).toBeHidden();

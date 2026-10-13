@@ -7,6 +7,8 @@ import { SettingsControls } from "@/components/SettingsControls";
 import { Button } from "@/components/ui/Button";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { Notice } from "@/components/ui/Notice";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { TONE_LABELS, type Tone } from "@/lib/reply";
 import type { CalendarErrorCode, Candidate, CandidateEvaluation, Settings } from "@/lib/types";
 
 const ERROR_TEXT: Record<CalendarErrorCode, { message: string; reconnect: boolean }> = {
@@ -41,6 +43,13 @@ export function ResultStep({
   onRetry,
   onReconnect,
   onEditCandidates,
+  tone,
+  onToneChange,
+  replyText,
+  selectedAlternatives,
+  onToggleAlternative,
+  onCopy,
+  onEditReply,
 }: {
   candidates: Candidate[];
   evaluations: CandidateEvaluation[];
@@ -52,6 +61,14 @@ export function ResultStep({
   onRetry: () => void;
   onReconnect: () => void;
   onEditCandidates: () => void;
+  tone: Tone;
+  onToneChange: (tone: Tone) => void;
+  /** 返信文（予定を取得できていない場合は null） */
+  replyText: string | null;
+  selectedAlternatives: Readonly<Record<string, readonly number[]>>;
+  onToggleAlternative: (candidateId: string, start: number) => void;
+  onCopy: () => void;
+  onEditReply: () => void;
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const fetchFailed = errorCode !== null;
@@ -98,10 +115,46 @@ export function ResultStep({
         {evaluations.map((e) => {
           const candidate = byId.get(e.candidateId);
           return candidate ? (
-            <ResultCard key={e.candidateId} candidate={candidate} evaluation={e} timeZone={settings.timeZone} />
+            <ResultCard
+              key={e.candidateId}
+              candidate={candidate}
+              evaluation={e}
+              timeZone={settings.timeZone}
+              selectedAlternatives={selectedAlternatives[e.candidateId]}
+              onToggleAlternative={
+                replyText !== null ? (start) => onToggleAlternative(e.candidateId, start) : undefined
+              }
+            />
           ) : null;
         })}
       </ul>
+
+      {replyText !== null && (
+        <section aria-labelledby="reply-preview-title" className="mt-8">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <h3 id="reply-preview-title" className="text-xs tracking-[0.2em] text-gold-deep">
+              返信文
+            </h3>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+          </div>
+          <div className="mt-4">
+            <SegmentedControl
+              label="文体"
+              options={["casual", "polite"] as const}
+              value={tone}
+              onChange={onToneChange}
+              format={(t) => TONE_LABELS[t]}
+            />
+          </div>
+          <p
+            className="mt-4 rounded-2xl bg-ivory p-4 text-[15px] leading-relaxed whitespace-pre-wrap"
+            data-testid="reply-preview"
+          >
+            {replyText}
+          </p>
+        </section>
+      )}
 
       <div className="mt-6 rounded-2xl border border-line p-4">
         <div className="flex items-center justify-between">
@@ -132,12 +185,17 @@ export function ResultStep({
       </p>
 
       <BottomBar>
-        <Button className="w-full" disabled>
-          返信文を作成する（準備中）
+        <Button className="w-full" disabled={replyText === null} onClick={onCopy}>
+          返信文をコピー
         </Button>
-        <Button variant="ghost" className="mt-1 w-full text-sm" onClick={onEditCandidates}>
-          候補を修正する
-        </Button>
+        <div className="mt-1 flex">
+          <Button variant="ghost" className="flex-1 text-sm" onClick={onEditCandidates}>
+            候補を修正
+          </Button>
+          <Button variant="ghost" className="flex-1 text-sm" disabled={replyText === null} onClick={onEditReply}>
+            返信文を編集
+          </Button>
+        </div>
       </BottomBar>
     </section>
   );

@@ -28,10 +28,14 @@ export function ResultCard({
   candidate,
   evaluation,
   timeZone,
+  selectedAlternatives = [],
+  onToggleAlternative,
 }: {
   candidate: Candidate;
   evaluation: CandidateEvaluation;
   timeZone: string;
+  selectedAlternatives?: readonly number[];
+  onToggleAlternative?: (start: number) => void;
 }) {
   const view = STATUS_VIEW[evaluation.status];
   const timeRange = `${formatTime(evaluation.slot.start, timeZone)}–${formatTime(evaluation.slot.end, timeZone)}`;
@@ -59,13 +63,28 @@ export function ResultCard({
 
       {evaluation.alternatives.length > 0 && (
         <div className="mt-3 pl-8">
-          <p className="text-xs tracking-wider text-sub">この時間なら空いています</p>
+          <p className="text-xs tracking-wider text-sub">
+            この時間なら空いています{onToggleAlternative ? "（タップで返信に追加）" : ""}
+          </p>
           <ul className="mt-2 flex flex-wrap gap-2" aria-label="代替案">
-            {evaluation.alternatives.map((alt) => (
-              <li key={alt.start} className="rounded-full border border-gold px-3 py-1.5 text-sm text-ink">
-                {formatTime(alt.start, timeZone)}〜
-              </li>
-            ))}
+            {evaluation.alternatives.map((alt) => {
+              const selected = selectedAlternatives.includes(alt.start);
+              return (
+                <li key={alt.start}>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    disabled={!onToggleAlternative}
+                    onClick={() => onToggleAlternative?.(alt.start)}
+                    className={`min-h-10 rounded-full border border-gold px-4 text-sm transition-colors disabled:cursor-default ${
+                      selected ? "bg-ink text-paper" : "bg-paper text-ink hover:bg-gold-soft"
+                    }`}
+                  >
+                    {formatTime(alt.start, timeZone)}〜
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
