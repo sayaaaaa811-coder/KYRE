@@ -17,6 +17,7 @@ describe("環境変数の検証", () => {
   it.each([
     ["鍵が 32 バイトでない", { SESSION_SECRET: Buffer.alloc(16).toString("base64") }],
     ["鍵がない", { SESSION_SECRET: undefined }],
+    ["テスト用のような単調な鍵", { SESSION_SECRET: Buffer.alloc(32, 1).toString("base64") }],
     ["リダイレクト先が別オリジン", { GOOGLE_REDIRECT_URI: "https://evil.example/callback" }],
     [
       "本番で http",

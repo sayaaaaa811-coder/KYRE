@@ -38,14 +38,16 @@ describe("暗号化セッション", () => {
 
   it("別の鍵では復号できない", async () => {
     const sealed = await sealSession(data, config);
-    const other = testConfig({ SESSION_SECRET: Buffer.alloc(32, 9).toString("base64") });
+    const other = testConfig({
+      SESSION_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 11 + 5) % 256)).toString("base64"),
+    });
     expect(await unsealSession(sealed, other, NOW)).toBeNull();
   });
 
   it("鍵のローテーション: 旧鍵で作ったセッションも SESSION_SECRET_PREVIOUS で読める", async () => {
     const sealed = await sealSession(data, config);
     const rotated = testConfig({
-      SESSION_SECRET: Buffer.alloc(32, 9).toString("base64"),
+      SESSION_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 11 + 5) % 256)).toString("base64"),
       SESSION_SECRET_PREVIOUS: TEST_ENV.SESSION_SECRET,
     });
     expect((await unsealSession(sealed, rotated, NOW))?.accessToken).toBe(data.accessToken);

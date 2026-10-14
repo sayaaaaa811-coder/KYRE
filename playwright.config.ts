@@ -38,7 +38,7 @@ export default defineConfig({
         GOOGLE_CLIENT_SECRET: "e2e-secret",
         GOOGLE_REDIRECT_URI: `http://localhost:${PORT}/api/auth/google/callback`,
         // テスト専用の固定鍵（本番では絶対に使わない）
-        SESSION_SECRET: Buffer.alloc(32, 1).toString("base64"),
+        SESSION_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 13 + 1) % 256)).toString("base64"),
         APP_ORIGIN: `http://localhost:${PORT}`,
         GOOGLE_ENDPOINT_OVERRIDE: `http://localhost:${FAKE_GOOGLE_PORT}`,
       },

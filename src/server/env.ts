@@ -4,9 +4,11 @@ import { logEvent } from "./logger";
 
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
-const base64Key = z.string().refine((v) => Buffer.from(v, "base64").length === 32, {
-  message: "must be 32 bytes encoded in base64",
-});
+const base64Key = z
+  .string()
+  .refine((v) => Buffer.from(v, "base64").length === 32, { message: "must be 32 bytes encoded in base64" })
+  // テスト用の固定値（同じバイトの繰り返し等）を本番で使ってしまう事故を防ぐ。乱数なら 32 バイト中ほぼ全てが異なる値になる
+  .refine((v) => new Set(Buffer.from(v, "base64")).size >= 16, { message: "looks like a non-random key" });
 
 const schema = z
   .object({

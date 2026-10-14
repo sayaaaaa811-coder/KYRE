@@ -4,7 +4,7 @@ export const TEST_ENV = {
   GOOGLE_CLIENT_ID: "test-client",
   GOOGLE_CLIENT_SECRET: "test-secret",
   GOOGLE_REDIRECT_URI: "http://localhost:3000/api/auth/google/callback",
-  SESSION_SECRET: Buffer.alloc(32, 7).toString("base64"),
+  SESSION_SECRET: Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 7 + 3) % 256)).toString("base64"),
   APP_ORIGIN: "http://localhost:3000",
 };
 

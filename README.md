@@ -5,7 +5,7 @@ LINE などで届いた日程候補を貼り付けると、Google カレンダ�
 - 設計書: [docs/README.md](docs/README.md)
 - 進捗報告: [Phase 1](docs/progress/phase-1.md) / [Phase 2](docs/progress/phase-2.md) / [Phase 3](docs/progress/phase-3.md) / [Phase 4](docs/progress/phase-4.md) / [Phase 5](docs/progress/phase-5.md)
 - セキュリティレビュー: [docs/security-review.md](docs/security-review.md)
-- 限定公開の手順（要承認）: [docs/setup/deploy.md](docs/setup/deploy.md)
+- 一般公開ガイド（PR マージ → Vercel → Google 連携）: [docs/setup/public-launch.md](docs/setup/public-launch.md)
 - Google カレンダー連携の設定: [docs/setup/google-cloud.md](docs/setup/google-cloud.md)
 
 ## 自分のパソコンで動かす手順（初心者向け）
