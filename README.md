@@ -3,6 +3,7 @@
 LINE などで届いた日程候補を貼り付けると、Google カレンダーの空き状況と照合して、参加できる日時・代替案・返信文を提示する無料 Web アプリ（開発中）。
 
 - 設計書: [docs/README.md](docs/README.md)
+- 別アプリ: イベントプロデュース事業の公式サイト（AUREL）は [aurel/](aurel/README.md) にあります
 - 進捗報告: [Phase 1](docs/progress/phase-1.md) / [Phase 2](docs/progress/phase-2.md) / [Phase 3](docs/progress/phase-3.md) / [Phase 4](docs/progress/phase-4.md) / [Phase 5](docs/progress/phase-5.md)
 - セキュリティレビュー: [docs/security-review.md](docs/security-review.md)
 - 一般公開ガイド（PR マージ → Vercel → Google 連携）: [docs/setup/public-launch.md](docs/setup/public-launch.md)

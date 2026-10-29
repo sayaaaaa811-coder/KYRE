@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* ===== Design tokens ===== */
+@theme {
+  /* Brand palette */
+  --color-charcoal: #171717;
+  --color-ivory: #f4f0e9;
+  --color-champagne: #a9957c;
+  --color-stone: #77736d;
+  --color-white: #ffffff;
+
+  /* 小さな文字を明るい背景に置くための、コントラストを確保した濃色版 */
+  --color-stone-ink: #6a665f;
+  --color-champagne-ink: #7a6750;
+
+  /* 補助色（罫線・面） */
+  --color-line: #ddd6cb;
+  --color-line-dark: #3a3836;
+  --color-sand: #ebe5da;
+
+  --font-serif: var(--font-cormorant), "Times New Roman", serif;
+  --font-sans: var(--font-noto-sans-jp), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+
+  --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-fade-up: fade-up 1.1s var(--ease-luxe) both;
+  --animate-fade-in: fade-in 1.4s var(--ease-luxe) both;
+  --animate-page-in: fade-in 0.7s var(--ease-luxe) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ===== Base ===== */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    @apply bg-ivory font-sans text-charcoal antialiased;
+    font-feature-settings: "palt";
+    letter-spacing: 0.02em;
+    line-height: 1.9;
+  }
+
+  /* セリフ体の数字はライニング数字で表示（オールドスタイルだと "100" が読みにくいため） */
+  .font-serif,
+  .display {
+    font-variant-numeric: lining-nums;
+  }
+
+  /* 日本語の見出し・短文を文節で改行し、行末の孤立文字を防ぐ */
+  h1,
+  h2,
+  h3,
+  p,
+  li,
+  dd,
+  dt,
+  summary {
+    word-break: auto-phrase;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    @apply bg-charcoal text-ivory;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-champagne-ink);
+    outline-offset: 3px;
+  }
+
+  /* 暗い背景上のフォーカスリング */
+  .on-dark :focus-visible {
+    outline-color: var(--color-champagne);
+  }
+}
+
+/* ===== Utilities ===== */
+@utility container-luxe {
+  width: 100%;
+  max-width: 88rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  @media (width >= 48rem) {
+    padding-inline: 3rem;
+  }
+  @media (width >= 80rem) {
+    padding-inline: 5rem;
+  }
+}
+
+/* 英字の小見出し（例: EVENT & EXPERIENCE PRODUCTION） */
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+/* 英字のディスプレイ見出し */
+@utility display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 1.05;
+}
+
+@utility section-y {
+  padding-block: 6rem;
+  @media (width >= 64rem) {
+    padding-block: 9rem;
+  }
+}
+
+/* ===== Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== Keyframes used via arbitrary animation values ===== */
+@keyframes hero-zoom {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes scroll-line {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  45% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  55% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}

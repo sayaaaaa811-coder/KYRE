@@ -23,6 +23,8 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // 別アプリ（AUREL サイト）。aurel/ 内の設定で個別に lint する
+    "aurel/**",
   ]),
 ]);
 
